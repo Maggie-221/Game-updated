@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guess the Number</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F2EFFA;
+    --surface: #FFFFFF;
+    --ink: #1E1838;
+    --muted: #6A6389;
+    --line: #DAD4EE;
+    --accent: #5B3DF5;
+    --accent-ink: #FFFFFF;
+    --track: #E4DFF5;
+    --alive: #B9A8FF;
+    --hot: #E5383B;
+    --warm: #E07B00;
+    --cool: #0A8DB8;
+    --cold: #3A56D4;
+    --good: #0E8A47;
+    --bad: #D62839;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17122B;
+      --surface: #221B40;
+      --ink: #F1EDFF;
+      --muted: #A79FCB;
+      --line: #382F63;
+      --accent: #8F7BFF;
+      --accent-ink: #17122B;
+      --track: #2E2653;
+      --alive: #5A46B8;
+      --hot: #FF6B6B;
+      --warm: #FFB03B;
+      --cool: #4CC9F0;
+      --cold: #7C93FF;
+      --good: #4ADE80;
+      --bad: #FF7A85;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17122B;
+    --surface: #221B40;
+    --ink: #F1EDFF;
+    --muted: #A79FCB;
+    --line: #382F63;
+    --accent: #8F7BFF;
+    --accent-ink: #17122B;
+    --track: #2E2653;
+    --alive: #5A46B8;
+    --hot: #FF6B6B;
+    --warm: #FFB03B;
+    --cool: #4CC9F0;
+    --cold: #7C93FF;
+    --good: #4ADE80;
+    --bad: #FF7A85;
+  }
+
+  html {
+    scroll-padding-top: env(safe-area-inset-top, 0px);
+    background: var(--bg);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Bricolage Grotesque", ui-rounded, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .app {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 1.75rem 1.25rem 3rem;
+  }
+
+  h1 {
+    margin: 0 0 .35rem;
+    font-size: clamp(2.2rem, 9vw, 3rem);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+  }
+  .intro {
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    max-width: 38ch;
+  }
+
+  .board {
+    background: var(--surface);
+    border: 1.5px solid var(--line);
+    border-radius: 22px;
+    padding: 1.25rem 1.25rem 1.5rem;
+  }
+
+  /* Number line */
+  .trackwrap { padding: 18px 12px 4px; }
+  .track {
+    position: relative;
+    height: 12px;
+    border-radius: 999px;
+    background: var(--track);
+  }
+  .alive {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    min-width: 8px;
+    border-radius: 999px;
+    background: var(--alive);
+  }
+  .pin {
+    position: absolute;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2.5px solid var(--surface);
+    transform: translate(-50%, -50%);
+  }
+  .pin.hot  { background: var(--hot); }
+  .pin.warm { background: var(--warm); }
+  .pin.cool { background: var(--cool); }
+  .pin.cold { background: var(--cold); }
+  .pin.secret {
+    width: 24px;
+    height: 24px;
+    background: var(--good);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 28%, transparent);
+  }
+  .scale {
+    display: flex;
+    justify-content: space-between;
+    margin: .55rem -4px 0;
+    font-size: .8rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .alive { transition: left .4s ease, width .4s ease; }
+    .pin { animation: drop .35s ease-out; }
+    @keyframes drop {
+      from { transform: translate(-50%, -50%) scale(0); }
+      to   { transform: translate(-50%, -50%) scale(1); }
+    }
+  }
+
+  /* Lives */
+  .lives {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin: 1.1rem 0 0;
+    font-size: .9rem;
+    color: var(--muted);
+  }
+  .hearts { display: flex; gap: .2rem; font-size: 1.2rem; line-height: 1; }
+  .life { color: var(--hot); }
+  .life.spent { color: var(--track); }
+
+  /* Feedback */
+  .feedback {
+    min-height: 5.25rem;
+    margin: 1rem 0 .25rem;
+  }
+  .say {
+    margin: 0 0 .5rem;
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .say.good { color: var(--good); }
+  .say.bad  { color: var(--bad); }
+  .tag {
+    display: inline-block;
+    padding: .15rem .65rem;
+    border-radius: 999px;
+    border: 1.5px solid currentColor;
+    font-size: .9rem;
+    font-weight: 700;
+  }
+  .tag.hot  { color: var(--hot); }
+  .tag.warm { color: var(--warm); }
+  .tag.cool { color: var(--cool); }
+  .tag.cold { color: var(--cold); }
+
+  /* Input row */
+  .row { display: flex; gap: .6rem; }
+  .guess {
+    flex: 1;
+    min-width: 0;
+    height: 58px;
+    padding: 0 .5rem;
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    background: var(--bg);
+    color: var(--ink);
+    font: inherit;
+    font-size: 1.8rem;
+    font-weight: 800;
+    text-align: center;
+    -moz-appearance: textfield;
+  }
+  .guess::-webkit-outer-spin-button,
+  .guess::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .guess:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
+
+  .btn {
+    min-height: 58px;
+    padding: 0 1.5rem;
+    border: 0;
+    border-radius: 14px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .btn.wide { width: 100%; }
+  [hidden] { display: none !important; }
+
+  /* History */
+  .history {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    list-style: none;
+    margin: 1.4rem 0 0;
+    padding: 0;
+    min-height: 2rem;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: .4rem;
+    padding: .25rem .75rem;
+    border-radius: 999px;
+    border: 1.5px solid currentColor;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip small { font-size: .75rem; font-weight: 600; }
+  .chip.hot  { color: var(--hot); }
+  .chip.warm { color: var(--warm); }
+  .chip.cool { color: var(--cool); }
+  .chip.cold { color: var(--cold); }
+
+  .stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 1.25rem .25rem 0;
+    color: var(--muted);
+    font-size: .95rem;
+  }
+  .stats strong { color: var(--ink); }
+</style>
+</head>
+<body>
+<main class="app">
+  <h1>Guess the number</h1>
+  <p class="intro">I'm thinking of a number from 1 to 100. You have 7 guesses. Each miss tells you how close you are.</p>
+
+  <section class="board" aria-label="Game board">
+    <div class="trackwrap" aria-hidden="true">
+      <div class="track" id="track">
+        <div class="alive" id="alive"></div>
+      </div>
+      <div class="scale"><span>1</span><span>50</span><span>100</span></div>
+    </div>
+
+    <div class="lives">
+      <span>Guesses left</span>
+      <span class="hearts" id="hearts" aria-live="polite"></span>
+    </div>
+
+    <div class="feedback" id="feedback" aria-live="polite"></div>
+
+    <form class="row" id="form" autocomplete="off">
+      <label for="guess" style="position:absolute;left:-9999px">Your guess</label>
+      <input class="guess" id="guess" type="number" inputmode="numeric" min="1" max="100" placeholder="?">
+      <button class="btn" type="submit">Guess</button>
+    </form>
+
+    <button class="btn wide" id="again" type="button" hidden>Play again</button>
+
+    <ul class="history" id="history" aria-label="Your guesses"></ul>
+  </section>
+
+  <p class="stats">
+    <span id="wins">Wins: <strong>0</strong> of <strong>0</strong></span>
+    <span id="best"></span>
+  </p>
+</main>
+
+<script>
+(function () {
+  var MAX_TRIES = 7, MIN = 1, MAX = 100;
+  var secret, low, high, tries, over;
+  var wins = 0, rounds = 0, best = null;
+
+  try {
+    var saved = localStorage.getItem('gtn_best');
+    if (saved) best = parseInt(saved, 10) || null;
+  } catch (e) {}
+
+  var $ = function (id) { return document.getElementById(id); };
+  var track = $('track'), alive = $('alive'), hearts = $('hearts');
+  var feedback = $('feedback'), form = $('form'), input = $('guess');
+  var again = $('again'), history = $('history');
+
+  function heat(diff) {
+    if (diff <= 5)  return ['hot',  'Burning hot'];
+    if (diff <= 15) return ['warm', 'Warm'];
+    if (diff <= 30) return ['cool', 'Cool'];
+    return ['cold', 'Freezing cold'];
+  }
+  function pct(n) { return ((n - MIN) / (MAX - MIN)) * 100; }
+
+  function drawHearts() {
+    hearts.textContent = '';
+    var left = MAX_TRIES - tries;
+    for (var i = 0; i < MAX_TRIES; i++) {
+      var s = document.createElement('span');
+      s.className = 'life' + (i < left ? '' : ' spent');
+      s.textContent = '\u2665';
+      hearts.appendChild(s);
+    }
+    hearts.setAttribute('aria-label', left + ' of ' + MAX_TRIES + ' guesses left');
+  }
+
+  function drawRange() {
+    alive.style.left = pct(low) + '%';
+    alive.style.width = Math.max(pct(high) - pct(low), 0) + '%';
+  }
+
+  function drawStats() {
+    $('wins').innerHTML = 'Wins: <strong>' + wins + '</strong> of <strong>' + rounds + '</strong>';
+    $('best').innerHTML = best ? 'Best: <strong>' + best + '</strong> ' + (best === 1 ? 'guess' : 'guesses') : '';
+  }
+
+  function say(text, cls, heatInfo) {
+    feedback.textContent = '';
+    var p = document.createElement('p');
+    p.className = 'say' + (cls ? ' ' + cls : '');
+    p.textContent = text;
+    feedback.appendChild(p);
+    if (heatInfo) {
+      var t = document.createElement('span');
+      t.className = 'tag ' + heatInfo[0];
+      t.textContent = heatInfo[1];
+      feedback.appendChild(t);
+    }
+  }
+
+  function addPin(n, cls) {
+    var pin = document.createElement('div');
+    pin.className = 'pin ' + cls;
+    pin.style.left = pct(n) + '%';
+    track.appendChild(pin);
+  }
+
+  function addChip(n, cls, dirText) {
+    var li = document.createElement('li');
+    li.className = 'chip ' + cls;
+    var b = document.createElement('span');
+    b.textContent = n;
+    var s = document.createElement('small');
+    s.textContent = dirText;
+    li.appendChild(b);
+    li.appendChild(s);
+    history.appendChild(li);
+  }
+
+  function newRound() {
+    secret = Math.floor(Math.random() * (MAX - MIN + 1)) + MIN;
+    low = MIN; high = MAX; tries = 0; over = false;
+    Array.prototype.slice.call(track.querySelectorAll('.pin')).forEach(function (p) { p.remove(); });
+    history.textContent = '';
+    input.value = '';
+    form.hidden = false;
+    again.hidden = true;
+    say('Make your first guess.');
+    drawHearts(); drawRange(); drawStats();
+    input.focus();
+  }
+
+  function endRound(won) {
+    over = true;
+    rounds++;
+    if (won) {
+      wins++;
+      if (!best || tries < best) {
+        best = tries;
+        try { localStorage.setItem('gtn_best', String(best)); } catch (e) {}
+      }
+      say('You got it in ' + tries + (tries === 1 ? ' guess.' : ' guesses.'), 'good');
+    } else {
+      say('Out of guesses. It was ' + secret + '.', 'bad');
+    }
+    addPin(secret, 'secret');
+    form.hidden = true;
+    again.hidden = false;
+    drawStats();
+    again.focus();
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (over) return;
+    var g = parseInt(input.value, 10);
+    if (isNaN(g) || g < MIN || g > MAX) {
+      say('Enter a whole number from 1 to 100.', 'bad');
+      input.focus();
+      return;
+    }
+    tries++;
+    var h = heat(Math.abs(g - secret));
+    var isLow = g < secret;
+
+    if (g === secret) {
+      drawHearts();
+      addChip(g, 'hot', 'correct');
+      endRound(true);
+      return;
+    }
+
+    addPin(g, h[0]);
+    addChip(g, h[0], isLow ? 'go higher' : 'go lower');
+    if (isLow) low = Math.max(low, g + 1); else high = Math.min(high, g - 1);
+    drawRange(); drawHearts();
+
+    if (tries >= MAX_TRIES) {
+      endRound(false);
+      return;
+    }
+    say(isLow ? 'Too low. Aim higher.' : 'Too high. Aim lower.', '', h);
+    input.value = '';
+    input.focus();
+  });
+
+  again.addEventListener('click', newRound);
+  newRound();
+})();
+</script>
+</body>
+</html>
